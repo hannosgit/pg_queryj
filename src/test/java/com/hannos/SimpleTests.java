@@ -1,16 +1,15 @@
 package com.hannos;
 
 
-import static org.assertj.core.api.Assertions.*;
-
-import com.hannos.jna.PgQuery;
+import com.hannos.jna.PgQueryParseResult;
 import org.junit.jupiter.api.Test;
 
 public class SimpleTests {
 
     @Test
     void test_parse() {
-        assertThatCode(() -> PgQuery.INSTANCE.pg_query_parse("SELECT * FROM foo")).doesNotThrowAnyException();
+        final PgQueryParseResult pgQueryParseResult = PgParser.parse("select * from onek2 where unique2 = 11 and stringu1 < 'B';");
+        System.out.println(pgQueryParseResult.parse_tree);
     }
 
 }
