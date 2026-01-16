@@ -2,6 +2,9 @@ syntax = "proto3";
 
 package pg_query;
 
+option java_package = "com.hannos.pgquery";
+option java_multiple_files = true;
+
 message ParseResult {
   int32 version = 1;
   repeated RawStmt stmts = 2;
@@ -3811,7 +3814,7 @@ enum Token {
   ISNULL = 482;
   ISOLATION = 483;
   JOIN = 484;
-  JSON = 485;
+  JSON_P = 485;
   JSON_ARRAY = 486;
   JSON_ARRAYAGG = 487;
   JSON_EXISTS = 488;
@@ -4060,7 +4063,7 @@ enum Token {
   VALIDATE = 731;
   VALIDATOR = 732;
   VALUE_P = 733;
-  VALUES = 734;
+  VALUES_P = 734;
   VARCHAR = 735;
   VARIADIC = 736;
   VARYING = 737;

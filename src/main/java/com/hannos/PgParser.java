@@ -1,7 +1,9 @@
 package com.hannos;
 
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.hannos.ffm.PgQueryDeparseResult;
+import com.hannos.pgquery.ParseResult;
 import com.hannos.ffm.PgQueryError;
 import com.hannos.ffm.PgQueryParseResult;
 import com.hannos.ffm.PgQueryProtobuf;
@@ -83,6 +85,15 @@ public class PgParser {
             byte[] protobufBytes = dataPtr.toArray(ValueLayout.JAVA_BYTE);
             pg_query_free_protobuf_parse_result(result);
             return protobufBytes;
+        }
+    }
+
+    public static ParseResult parseToAst(String sql) {
+        byte[] protobuf = parseProtobuf(sql);
+        try {
+            return ParseResult.parseFrom(protobuf);
+        } catch (InvalidProtocolBufferException e) {
+            throw new RuntimeException("Failed to parse protobuf", e);
         }
     }
 

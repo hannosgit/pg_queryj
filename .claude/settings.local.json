@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir /s \"C:\\\\Users\\\\hanne\\\\IdeaProjects\\\\pg_queryj\\\\src\")"
+      "Bash(dir /s \"C:\\\\Users\\\\hanne\\\\IdeaProjects\\\\pg_queryj\\\\src\")",
+      "Bash(mvn clean compile:*)",
+      "Bash(mvn test:*)"
     ]
   }
 }

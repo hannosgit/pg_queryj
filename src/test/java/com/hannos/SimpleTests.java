@@ -1,6 +1,8 @@
 package com.hannos;
 
 
+import com.hannos.pgquery.ParseResult;
+import com.hannos.pgquery.SelectStmt;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +24,17 @@ public class SimpleTests {
     void test_parse_malformed_input() {
         assertThatThrownBy(() ->
                 PgParser.parse("SELECT FROM FROM")).isInstanceOf(ParseException.class);
+    }
+
+    @Test
+    void test_parseToAst() {
+        ParseResult result = PgParser.parseToAst("SELECT 1, 2, 3");
+
+        assertThat(result.getStmtsCount()).isEqualTo(1);
+        assertThat(result.getStmts(0).getStmt().hasSelectStmt()).isTrue();
+
+        SelectStmt selectStmt = result.getStmts(0).getStmt().getSelectStmt();
+        assertThat(selectStmt.getTargetListCount()).isEqualTo(3);
     }
 
 }
