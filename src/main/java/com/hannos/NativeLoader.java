@@ -8,25 +8,24 @@ import java.nio.file.StandardCopyOption;
 
 public class NativeLoader {
 
+    private static final String LIBRARY_NAME = "pg_query";
+
     static {
         loadNativeLibrary();
     }
 
     private static void loadNativeLibrary() {
-        String os = System.getProperty("os.name").toLowerCase();
-        String libName;
-        String extension;
+        final String os = System.getProperty("os.name").toLowerCase();
 
+        final String extension;
         if (os.contains("win")) {
-            libName = "pg_query.dll";
             extension = ".dll";
         } else if (os.contains("mac")) {
-            libName = "pg_query.dylib";
             extension = ".dylib";
         } else {
-            libName = "pg_query.so";
             extension = ".so";
         }
+        final String libName = LIBRARY_NAME + extension;
 
         try (InputStream is = NativeLoader.class.getResourceAsStream("/" + libName)) {
             if (is == null) {
@@ -39,7 +38,6 @@ public class NativeLoader {
             Files.copy(is, tempLib, StandardCopyOption.REPLACE_EXISTING);
 
             System.load(tempLib.toAbsolutePath().toString());
-
         } catch (IOException e) {
             throw new RuntimeException("Failed to load native library", e);
         }
