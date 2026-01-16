@@ -1,0 +1,1 @@
+The binaries for pg_query are licensed under the given LICENSE.
