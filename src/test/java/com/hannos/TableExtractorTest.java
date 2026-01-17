@@ -1,7 +1,6 @@
 package com.hannos;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -151,17 +150,7 @@ public class TableExtractorTest {
     class WithClauses {
 
         @Test
-        void simpleCte_currentBehavior() {
-            // Current implementation only extracts CTE references, not tables inside CTE definitions
-            Set<String> tables = extractor.extractTables(
-                    "WITH active_users AS (SELECT * FROM users WHERE active = true) " +
-                            "SELECT * FROM active_users");
-            assertThat(tables).containsExactly("active_users");
-        }
-
-        @Test
-        @Disabled("CTE definition extraction not yet implemented")
-        void simpleCte_expectedBehavior() {
+        void simpleCte() {
             Set<String> tables = extractor.extractTables(
                     "WITH active_users AS (SELECT * FROM users WHERE active = true) " +
                             "SELECT * FROM active_users");
@@ -169,19 +158,7 @@ public class TableExtractorTest {
         }
 
         @Test
-        void multipleCtes_currentBehavior() {
-            // Current implementation only extracts CTE references from main query
-            Set<String> tables = extractor.extractTables(
-                    "WITH " +
-                            "  active_users AS (SELECT * FROM users WHERE active = true), " +
-                            "  recent_orders AS (SELECT * FROM orders WHERE created_at > '2024-01-01') " +
-                            "SELECT * FROM active_users JOIN recent_orders ON active_users.id = recent_orders.user_id");
-            assertThat(tables).containsExactlyInAnyOrder("active_users", "recent_orders");
-        }
-
-        @Test
-        @Disabled("CTE definition extraction not yet implemented")
-        void multipleCtes_expectedBehavior() {
+        void multipleCtes() {
             Set<String> tables = extractor.extractTables(
                     "WITH " +
                             "  active_users AS (SELECT * FROM users WHERE active = true), " +
@@ -191,18 +168,7 @@ public class TableExtractorTest {
         }
 
         @Test
-        void nestedCte_currentBehavior() {
-            Set<String> tables = extractor.extractTables(
-                    "WITH user_orders AS (" +
-                            "  SELECT u.id, o.total FROM users u JOIN orders o ON u.id = o.user_id" +
-                            ") " +
-                            "SELECT * FROM user_orders JOIN products ON user_orders.id = products.user_id");
-            assertThat(tables).containsExactlyInAnyOrder("user_orders", "products");
-        }
-
-        @Test
-        @Disabled("CTE definition extraction not yet implemented")
-        void nestedCte_expectedBehavior() {
+        void nestedCte() {
             Set<String> tables = extractor.extractTables(
                     "WITH user_orders AS (" +
                             "  SELECT u.id, o.total FROM users u JOIN orders o ON u.id = o.user_id" +
@@ -212,21 +178,7 @@ public class TableExtractorTest {
         }
 
         @Test
-        void recursiveCte_currentBehavior() {
-            Set<String> tables = extractor.extractTables(
-                    "WITH RECURSIVE subordinates AS (" +
-                            "  SELECT id, name, manager_id FROM employees WHERE id = 1 " +
-                            "  UNION ALL " +
-                            "  SELECT e.id, e.name, e.manager_id FROM employees e " +
-                            "  INNER JOIN subordinates s ON e.manager_id = s.id" +
-                            ") " +
-                            "SELECT * FROM subordinates");
-            assertThat(tables).containsExactly("subordinates");
-        }
-
-        @Test
-        @Disabled("CTE definition extraction not yet implemented")
-        void recursiveCte_expectedBehavior() {
+        void recursiveCte() {
             Set<String> tables = extractor.extractTables(
                     "WITH RECURSIVE subordinates AS (" +
                             "  SELECT id, name, manager_id FROM employees WHERE id = 1 " +
@@ -272,32 +224,14 @@ public class TableExtractorTest {
         }
 
         @Test
-        void notInSubquery_currentBehavior() {
-            // NOT IN with A_Expr wrapping SubLink not fully handled
-            Set<String> tables = extractor.extractTables(
-                    "SELECT * FROM users WHERE id NOT IN (SELECT user_id FROM blacklist)");
-            assertThat(tables).containsExactly("users");
-        }
-
-        @Test
-        @Disabled("A_Expr with SubLink not yet implemented")
-        void notInSubquery_expectedBehavior() {
+        void notInSubquery() {
             Set<String> tables = extractor.extractTables(
                     "SELECT * FROM users WHERE id NOT IN (SELECT user_id FROM blacklist)");
             assertThat(tables).containsExactlyInAnyOrder("users", "blacklist");
         }
 
         @Test
-        void scalarSubquery_currentBehavior() {
-            // Scalar subqueries in SELECT clause not handled
-            Set<String> tables = extractor.extractTables(
-                    "SELECT *, (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) as order_count FROM users");
-            assertThat(tables).containsExactly("users");
-        }
-
-        @Test
-        @Disabled("Scalar subqueries in SELECT clause not yet implemented")
-        void scalarSubquery_expectedBehavior() {
+        void scalarSubquery() {
             Set<String> tables = extractor.extractTables(
                     "SELECT *, (SELECT COUNT(*) FROM orders WHERE orders.user_id = users.id) as order_count FROM users");
             assertThat(tables).containsExactlyInAnyOrder("users", "orders");
@@ -346,22 +280,7 @@ public class TableExtractorTest {
         }
 
         @Test
-        void mixedNestedQueries_currentBehavior() {
-            // Deeply nested IN subqueries inside EXISTS not fully handled
-            Set<String> tables = extractor.extractTables(
-                    "SELECT * FROM (" +
-                            "  SELECT u.* FROM users u WHERE EXISTS (" +
-                            "    SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.product_id IN (" +
-                            "      SELECT id FROM products" +
-                            "    )" +
-                            "  )" +
-                            ") AS active_users JOIN accounts ON active_users.id = accounts.user_id");
-            assertThat(tables).containsExactlyInAnyOrder("users", "orders", "accounts");
-        }
-
-        @Test
-        @Disabled("Deeply nested A_Expr with SubLink not yet implemented")
-        void mixedNestedQueries_expectedBehavior() {
+        void mixedNestedQueries() {
             Set<String> tables = extractor.extractTables(
                     "SELECT * FROM (" +
                             "  SELECT u.* FROM users u WHERE EXISTS (" +
@@ -516,30 +435,7 @@ public class TableExtractorTest {
     class ComplexScenarios {
 
         @Test
-        void complexReportQuery_currentBehavior() {
-            // CTEs not fully traversed, tables inside CTEs not extracted
-            Set<String> tables = extractor.extractTables(
-                    "WITH monthly_sales AS (" +
-                            "  SELECT DATE_TRUNC('month', order_date) as month, SUM(total) as revenue " +
-                            "  FROM orders JOIN order_items ON orders.id = order_items.order_id " +
-                            "  GROUP BY 1" +
-                            "), " +
-                            "user_segments AS (" +
-                            "  SELECT user_id, CASE WHEN total_spent > 1000 THEN 'high' ELSE 'low' END as segment " +
-                            "  FROM (SELECT user_id, SUM(total) as total_spent FROM orders GROUP BY user_id) AS spending" +
-                            ") " +
-                            "SELECT u.name, us.segment, ms.revenue " +
-                            "FROM users u " +
-                            "JOIN user_segments us ON u.id = us.user_id " +
-                            "CROSS JOIN monthly_sales ms " +
-                            "WHERE u.id IN (SELECT user_id FROM premium_members)");
-            assertThat(tables).containsExactlyInAnyOrder(
-                    "users", "monthly_sales", "user_segments", "premium_members");
-        }
-
-        @Test
-        @Disabled("CTE definition extraction not yet implemented")
-        void complexReportQuery_expectedBehavior() {
+        void complexReportQuery() {
             Set<String> tables = extractor.extractTables(
                     "WITH monthly_sales AS (" +
                             "  SELECT DATE_TRUNC('month', order_date) as month, SUM(total) as revenue " +

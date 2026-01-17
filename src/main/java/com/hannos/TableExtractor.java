@@ -1,11 +1,16 @@
 package com.hannos;
 
+import com.hannos.pgquery.A_Expr;
+import com.hannos.pgquery.BoolExpr;
+import com.hannos.pgquery.CommonTableExpr;
 import com.hannos.pgquery.JoinExpr;
 import com.hannos.pgquery.Node;
 import com.hannos.pgquery.ParseResult;
 import com.hannos.pgquery.RangeVar;
 import com.hannos.pgquery.RawStmt;
+import com.hannos.pgquery.ResTarget;
 import com.hannos.pgquery.SelectStmt;
+import com.hannos.pgquery.WithClause;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -25,6 +30,30 @@ public class TableExtractor {
     }
 
     private void extractFromSelect(SelectStmt select, Set<String> tables) {
+        // Process WITH clause (CTEs)
+        if (select.hasWithClause()) {
+            WithClause withClause = select.getWithClause();
+            for (Node cteNode : withClause.getCtesList()) {
+                if (cteNode.hasCommonTableExpr()) {
+                    CommonTableExpr cte = cteNode.getCommonTableExpr();
+                    // Process the query inside the CTE
+                    if (cte.hasCtequery() && cte.getCtequery().hasSelectStmt()) {
+                        extractFromSelect(cte.getCtequery().getSelectStmt(), tables);
+                    }
+                }
+            }
+        }
+
+        // Process SELECT clause (target list) for scalar subqueries
+        for (Node targetNode : select.getTargetListList()) {
+            if (targetNode.hasResTarget()) {
+                ResTarget resTarget = targetNode.getResTarget();
+                if (resTarget.hasVal()) {
+                    extractFromNode(resTarget.getVal(), tables);
+                }
+            }
+        }
+
         // Process FROM clause
         for (Node node : select.getFromClauseList()) {
             extractFromNode(node, tables);
@@ -38,10 +67,10 @@ public class TableExtractor {
         if (select.hasWhereClause()) extractFromNode(select.getWhereClause(), tables);
     }
 
-    private void extractFromNode(Node node, Set<java.lang.String> tables) {
+    private void extractFromNode(Node node, Set<String> tables) {
         if (node.hasRangeVar()) {
             RangeVar rv = node.getRangeVar();
-            java.lang.String tableName = rv.getSchemaname().isEmpty()
+            String tableName = rv.getSchemaname().isEmpty()
                     ? rv.getRelname()
                     : rv.getSchemaname() + "." + rv.getRelname();
             tables.add(tableName);
@@ -55,6 +84,21 @@ public class TableExtractor {
         } else if (node.hasSubLink()) {
             // Subquery in WHERE/SELECT (e.g., EXISTS, IN)
             extractFromSelect(node.getSubLink().getSubselect().getSelectStmt(), tables);
+        } else if (node.hasBoolExpr()) {
+            // Handle AND/OR expressions
+            BoolExpr boolExpr = node.getBoolExpr();
+            for (Node arg : boolExpr.getArgsList()) {
+                extractFromNode(arg, tables);
+            }
+        } else if (node.hasAExpr()) {
+            // Handle expressions like "id NOT IN (SELECT ...)"
+            A_Expr aExpr = node.getAExpr();
+            if (aExpr.hasLexpr()) {
+                extractFromNode(aExpr.getLexpr(), tables);
+            }
+            if (aExpr.hasRexpr()) {
+                extractFromNode(aExpr.getRexpr(), tables);
+            }
         }
     }
 }
