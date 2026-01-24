@@ -32,7 +32,7 @@ public class PgParser {
                 String message = PgQueryError.message(error).getString(0);
                 int cursorPos = PgQueryError.cursorpos(error);
                 pg_query_free_parse_result(memorySegment);
-                throw new ParseException(message, cursorPos);
+                throw new ParseException(ParseError.fromSql(ParseError.Kind.SYNTAX, message, cursorPos, sql));
             }
 
             MemorySegment parseTree = PgQueryParseResult.parse_tree(memorySegment);
@@ -57,7 +57,7 @@ public class PgParser {
                 String message = PgQueryError.message(error).getString(0);
                 int cursorPos = PgQueryError.cursorpos(error);
                 pg_query_free_deparse_result(result);
-                throw new ParseException(message, cursorPos);
+                throw new ParseException(ParseError.basic(ParseError.Kind.DEPARSE, message, cursorPos));
             }
 
             String query = PgQueryDeparseResult.query(result).getString(0);
@@ -76,7 +76,7 @@ public class PgParser {
                 String message = PgQueryError.message(error).getString(0);
                 int cursorPos = PgQueryError.cursorpos(error);
                 pg_query_free_protobuf_parse_result(result);
-                throw new ParseException(message, cursorPos);
+                throw new ParseException(ParseError.fromSql(ParseError.Kind.PROTOBUF, message, cursorPos, sql));
             }
 
             MemorySegment parseTree = PgQueryProtobufParseResult.parse_tree(result);
