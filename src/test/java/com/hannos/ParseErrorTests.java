@@ -36,4 +36,39 @@ public class ParseErrorTests {
         ParseError error = parseException.getError();
         assertThat(error.getKind()).isEqualTo(ParseError.Kind.PROTOBUF);
     }
+
+    @Test
+    void test_from_sql_multiline_position() {
+        String sql = "SELECT 1;\nSELECT FROM x;\nSELECT 3;";
+        int cursor = sql.indexOf("FROM") + 1;
+
+        ParseError error = ParseError.fromSql(ParseError.Kind.SYNTAX, "syntax error", cursor, sql);
+
+        assertThat(error.getLine()).isEqualTo(2);
+        assertThat(error.getColumn()).isEqualTo("SELECT ".length() + 1);
+        assertThat(error.getLineText()).isEqualTo("SELECT FROM x;");
+        assertThat(error.getCaretColumn()).isEqualTo(error.getColumn());
+    }
+
+    @Test
+    void test_from_sql_out_of_range_falls_back_to_basic() {
+        String sql = "SELECT 1";
+
+        ParseError error = ParseError.fromSql(ParseError.Kind.SYNTAX, "syntax error", 0, sql);
+
+        assertThat(error.getLine()).isEqualTo(-1);
+        assertThat(error.getColumn()).isEqualTo(-1);
+        assertThat(error.getLineText()).isNull();
+    }
+
+    @Test
+    void test_parse_exception_wraps_error() {
+        ParseError error = ParseError.basic(ParseError.Kind.DEPARSE, "boom", 12);
+
+        ParseException exception = new ParseException(error);
+
+        assertThat(exception.getError()).isSameAs(error);
+        assertThat(exception.getCursorPosition()).isEqualTo(12);
+        assertThat(exception.getMessage()).isEqualTo("boom");
+    }
 }
